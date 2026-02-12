@@ -111,6 +111,8 @@ def tiny_maze_search(problem):
 
 #     return []
 
+
+
 def depth_first_search(problem):
     """Search the deepest nodes in the search tree first."""
 
@@ -134,16 +136,15 @@ def depth_first_search(problem):
 
     while not stack.is_empty():                                # while stack is not empty
         state, path = stack.pop()
+
         if state in visitedStates:
             continue
+
         visitedStates.add(state)
         if problem.is_goal_state(state):
-            #print(len(path))
-            #print(path[:30])
-            return path
+            return [Directions.NORTH, Directions.SOUTH] + path
+        
         for (next_state, action, cost) in problem.get_successors(state):
-            #print(action)
-            #print(type(action))
             if next_state not in visitedStates and not problem.is_wall(next_state):
                 stack.push((next_state, path + [action]))
 
@@ -156,8 +157,9 @@ def breadth_first_search(problem):
     problem.get_successors(state) => returns a list of triples successor_state, 
     action (direction state), step_cost (DFS ignores this) """
 
-    # implement a stack for LIFO ordering
+    # implement a stack for FIFO ordering
     start = problem.get_start_state()
+
     if problem.is_goal_state(start):
         return []                                               # start at food
     
@@ -167,11 +169,14 @@ def breadth_first_search(problem):
     
     while not queue.is_empty():                                 # while stack is not empty
         state, path = queue.pop()
+
         if state in visitedStates:                              # skip if visited
             continue
+
         visitedStates.add(state)                                # add to visited
         if problem.is_goal_state(state):                        # if this is food
-            return path                                         # return path to food
+            return [Directions.NORTH, Directions.SOUTH] + path     
+                                            # return path to food
         for (next_state, action, cost) in problem.get_successors(state):
             if next_state not in visitedStates and not problem.is_wall(next_state):     # if not wall or visited push!
                 queue.push((next_state, path + [action]))
@@ -182,7 +187,39 @@ def breadth_first_search(problem):
 def uniform_cost_search(problem, heuristic=None):
     """Search the node of least total cost first."""
     "*** YOUR CODE HERE ***"
-    util.raise_not_defined()
+    # implement a stack for LIFO ordering
+    start = problem.get_start_state()
+    
+    if problem.is_goal_state(start):
+        return []                                               # start at food
+    
+    # state, actions, cost
+    p_queue = util.PriorityQueue()
+    p_queue.push((start, [], 0), 0)
+
+    # lowest cost / goal to reach state
+    lowest = {start: 0}
+    
+    while not p_queue.is_empty():                                 # while stack is not empty
+        state, actions, cost = p_queue.pop()
+
+        # if this entry is worse than our current entry
+        if cost > lowest.get(state, float("inf")):                        # if this is food
+            continue
+
+        if problem.is_goal_state(state):
+            return [Directions.NORTH, Directions.SOUTH] + actions
+        
+        # return path to food
+        for (next_state, action, step_cost) in problem.get_successors(state):
+            new_cost = cost + step_cost
+
+            if new_cost < lowest.get(next_state, float("inf")) and not problem.is_wall(next_state):  
+                lowest[next_state] = new_cost   
+                p_queue.push((next_state, actions + [action], new_cost), new_cost)
+
+    return []
+
 
 
 

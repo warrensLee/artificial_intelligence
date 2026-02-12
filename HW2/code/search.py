@@ -18,6 +18,8 @@ Pacman agents (in search_agents.py).
 """
 
 from builtins import object
+from game import Directions 
+from game import Actions
 import util
 import os
 
@@ -87,10 +89,27 @@ def tiny_maze_search(problem):
     w = Directions.WEST
     return [s, s, w, s, w, w, s, w]
 
-def is_wall(self, state):
-    x, y = state
-    if self.walls[x][y]: return True
-    else: return False
+# def is_wall(self, state):
+#     x, y = state
+#     if self.walls[x][y]: return True
+#     else: return False
+
+# def first_hit(problem, start):
+#     # look all directions from start
+#     # if wall is adjacent hit it
+#     # finish searching
+#     # return wall_hit_action + normal_path
+#     x, y = start
+#     Direct = [Directions.NORTH, Directions.SOUTH, Directions.EAST, Directions.WEST]
+
+#     for direction in Direct:
+#         dx, dy = Actions.direction_to_vector(direction)
+#         neighbor = (int(x + dx), int(y + dy))
+#         if problem.is_wall(neighbor):
+#             return [direction]
+
+
+#     return []
 
 def depth_first_search(problem):
     """Search the deepest nodes in the search tree first."""
@@ -108,6 +127,10 @@ def depth_first_search(problem):
     stack = util.Stack()
     visitedStates = set()
     stack.push((start, []))
+    # wall_hit = first_hit(problem, start)
+    # print("Wall hit action:", wall_hit)
+    # print(problem.get_cost_of_actions(wall_hit))
+
 
     while not stack.is_empty():                                # while stack is not empty
         state, path = stack.pop()
@@ -136,21 +159,21 @@ def breadth_first_search(problem):
     # implement a stack for LIFO ordering
     start = problem.get_start_state()
     if problem.is_goal_state(start):
-        return []                               # start at food
+        return []                                               # start at food
     
     queue = util.Queue()
     visitedStates = set()
     queue.push((start, []))
-
-    while not queue.is_empty():                                # while stack is not empty
+    
+    while not queue.is_empty():                                 # while stack is not empty
         state, path = queue.pop()
-        if state in visitedStates:
+        if state in visitedStates:                              # skip if visited
             continue
-        visitedStates.add(state)
-        if problem.is_goal_state(state):
-            return path
+        visitedStates.add(state)                                # add to visited
+        if problem.is_goal_state(state):                        # if this is food
+            return path                                         # return path to food
         for (next_state, action, cost) in problem.get_successors(state):
-            if next_state not in visitedStates and not problem.is_wall(next_state):
+            if next_state not in visitedStates and not problem.is_wall(next_state):     # if not wall or visited push!
                 queue.push((next_state, path + [action]))
 
     return []

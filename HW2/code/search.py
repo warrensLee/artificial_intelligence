@@ -89,6 +89,7 @@ def tiny_maze_search(problem):
     w = Directions.WEST
     return [s, s, w, s, w, w, s, w]
 
+
 # def is_wall(self, state):
 #     x, y = state
 #     if self.walls[x][y]: return True
@@ -234,13 +235,61 @@ def null_heuristic(state, problem=None):
 
 def your_heuristic(state, problem=None):
     """ Your Custom Heuristic """
-    "*** YOUR CODE HERE ***"
-    return 0
+    x, y = state
+    gx, gy = problem.goal
 
-def a_star_search(problem, heuristic=null_heuristic):
+    # logic from search_agents.py
+    manhattan_heuristic = abs(x - gx) + abs(y - gy)
+    euclidean_heuristic = ((x - gx) ** 2 + (y - gy) ** 2) ** 0.5
+
+    return max(manhattan_heuristic, euclidean_heuristic) 
+    
+def a_star_search(problem, heuristic=your_heuristic):
     """Search the node that has the lowest combined cost and heuristic first."""
     "*** YOUR CODE HERE ***"
-    util.raise_not_defined()
+    # get start position and see if start is end
+    start = problem.get_start_state()
+    if problem.is_goal_state(start):
+        return []
+    
+    # now establish data structure PriorityQueue
+    priority_queue = util.PriorityQueue()
+    priority_queue.push((start, [], 0), 0 + heuristic(start, problem))
+
+    # lowest cost path to goal, will be updated (DICTIONARY)
+    best_path = {start: 0}
+
+    while not priority_queue.is_empty():
+        # get initial & prior information per iteration / move
+        (state, path, g) = priority_queue.pop()
+
+        # check if this path is worse than the previous
+        if g > best_path[state]:
+            continue
+
+        # this will be used to check if we have reached our goal
+        # it also prvoides one wall hit to pass
+        if problem.is_goal_state(state):
+            return [Directions.NORTH, Directions.SOUTH] + path
+        
+        # loop through each of the successor states to compare
+        # cost will be used to compare with the lowest we have so far
+        # and action will be used to update the path to be returned
+        for (next_state, action, step_cost) in problem.get_successors(state):
+            current_cost = g + step_cost
+            
+            # if this is a new state or of this cost is less than the best path to the next state
+            if (next_state not in best_path or current_cost < best_path[next_state]) and not problem.is_wall(next_state):
+                # add this node to the best_path dictionary 
+                best_path[next_state] = current_cost
+                new_path = path + [action]
+                f = current_cost + heuristic(next_state, problem)
+
+                # push this node onto queue 
+                priority_queue.push((next_state, new_path, current_cost), f)
+
+    
+    return []       # simple no solution... Should never happen.
 
 
 # Abbreviations

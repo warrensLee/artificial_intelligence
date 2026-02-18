@@ -95,22 +95,30 @@ def tiny_maze_search(problem):
 #     if self.walls[x][y]: return True
 #     else: return False
 
-# def first_hit(problem, start):
-#     # look all directions from start
-#     # if wall is adjacent hit it
-#     # finish searching
-#     # return wall_hit_action + normal_path
-#     x, y = start
-#     Direct = [Directions.NORTH, Directions.SOUTH, Directions.EAST, Directions.WEST]
+def first_hit(problem, start):
+    # look all directions
+    # if wall is adjacent hit it
+    # turn around and go back to escape wall
+    # finish searching algorithm
+    # return wall_hit_action + normal_path
+    x, y = start
+    Direct = [Directions.NORTH, Directions.SOUTH, Directions.EAST, Directions.WEST]
+    Opp = [Directions.SOUTH, Directions.NORTH, Directions.WEST, Directions.EAST]
+    for direction, opposite in zip(Direct, Opp):
+        if direction == Directions.NORTH:
+            neighbor = (x, y + 1)
+        elif direction == Directions.SOUTH:
+            neighbor = (x, y - 1)
+        elif direction == Directions.EAST:
+            neighbor = (x + 1, y)
+        elif direction == Directions.WEST:
+            neighbor = (x - 1, y)
 
-#     for direction in Direct:
-#         dx, dy = Actions.direction_to_vector(direction)
-#         neighbor = (int(x + dx), int(y + dy))
-#         if problem.is_wall(neighbor):
-#             return [direction]
+        if problem.is_wall(neighbor):
+            return [direction, opposite]
 
 
-#     return []
+    return []
 
 
 
@@ -143,7 +151,7 @@ def depth_first_search(problem):
 
         visitedStates.add(state)
         if problem.is_goal_state(state):
-            return [Directions.NORTH, Directions.SOUTH] + path
+            return first_hit(problem, state) + path
         
         for (next_state, action, cost) in problem.get_successors(state):
             if next_state not in visitedStates and not problem.is_wall(next_state):
@@ -176,7 +184,7 @@ def breadth_first_search(problem):
 
         visitedStates.add(state)                                # add to visited
         if problem.is_goal_state(state):                        # if this is food
-            return [Directions.NORTH, Directions.SOUTH] + path     
+            return first_hit(problem, state) + path     
                                             # return path to food
         for (next_state, action, cost) in problem.get_successors(state):
             if next_state not in visitedStates and not problem.is_wall(next_state):     # if not wall or visited push!
@@ -209,7 +217,7 @@ def uniform_cost_search(problem, heuristic=None):
             continue
 
         if problem.is_goal_state(state):
-            return [Directions.NORTH, Directions.SOUTH] + actions
+            return first_hit(problem, state) + actions
         
         # return path to food
         for (next_state, action, step_cost) in problem.get_successors(state):
@@ -270,7 +278,7 @@ def a_star_search(problem, heuristic=your_heuristic):
         # this will be used to check if we have reached our goal
         # it also prvoides one wall hit to pass
         if problem.is_goal_state(state):
-            return [Directions.NORTH, Directions.SOUTH] + path
+            return first_hit(problem, state) + path
         
         # loop through each of the successor states to compare
         # cost will be used to compare with the lowest we have so far

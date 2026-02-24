@@ -1,0 +1,12 @@
+Homework 2 Commands
+python pacman.py -l medium_maze -p SearchAgent -a fn=bfs
+python pacman.py -l medium_maze -p SearchAgent -a fn=dfs
+python pacman.py -l medium_maze -p SearchAgent -a fn=ucs
+python pacman.py -l medium_maze -p SearchAgent -a fn=astar,heuristic=manhattan_heuristic
+
+Homework 3 Commands
+python pacman.py -l tiny_corners -p SearchAgent -a fn=bfs,prob=CornersProblem
+python pacman.py -l medium_corners -p SearchAgent -a fn=bfs,prob=CornersProblem
+python pacman.py -l medium_corners -p SearchAgent -a fn=astar,prob=CornersProblem,heuristic=corners_heuristic
+python pacman.py -l tricky_search -p SearchAgent -a fn=astar,prob=FoodSearchProblem,heuristic=food_heuristic
+python pacman.py -l big_search -p ClosestDotSearchAgent -z .5

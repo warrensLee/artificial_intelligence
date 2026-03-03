@@ -353,37 +353,67 @@ class CornersProblem(search.SearchProblem):
         #     self.debugging = True
         #     self.total_iterations = 0
 
-        "*** YOUR CODE HERE ***"
 
     def get_start_state(self):
         """
         Returns the start state (in your state space, not the full Pacman state space)
         """
-        "*** YOUR CODE HERE ***"
-        util.raise_not_defined()
+        pos = self.starting_position
+        if pos in self.corners:
+            visited = frozenset([pos])
+        else:
+            visited = frozenset()
+        
+        return ((pos), visited)
 
     def is_goal_state(self, state):
         """
         Returns whether this search state is a goal state of the problem.
         """
-        "*** YOUR CODE HERE ***"
-        util.raise_not_defined()
+        pos, visited = state
+        if len(visited) == 4:
+            return True
+        
+        return False
+
 
     def is_wall(self, state):
-        utils.raise_not_defined()
+        pos, visited = state
+        x, y = pos
+        return self.walls[x][y]
 
 
     def get_successors(self, state):
         successors = []
-        M = self.walls.width
-        N = self.walls.height
 
-        "*** YOUR CODE HERE ***"
-        utils.raise_not_defined()
-
-
+        (x, y), visited = state   # <-- THIS LINE IS REQUIRED
 
         self._expanded += 1 # DO NOT CHANGE
+
+
+        # Try the 4 legal moves
+        for action in [Directions.NORTH, Directions.SOUTH, Directions.EAST, Directions.WEST]:
+            dx, dy = Actions.direction_to_vector(action)
+            nextx, nexty = int(x + dx), int(y + dy)
+
+            # wall check
+            if self.walls[nextx][nexty]:
+                continue
+
+            next_pos = (nextx, nexty)
+
+            # update visited corners immutably
+            if next_pos in self.corners:
+                next_visited = visited | frozenset([next_pos])
+            else:
+                next_visited = visited
+
+            next_state = (next_pos, next_visited)
+
+            # cost is always 1 per move
+            successors.append((next_state, action, 1))
+
+
         return successors
 
     def get_cost_of_actions(self, actions):

@@ -19,7 +19,7 @@ Pacman agents (in search_agents.py).
 
 from builtins import object
 import util
-import os
+from game import Directions, Actions
 
 # (you can ignore this, although it might be helpful to know about)
 # This is effectively an abstract class
@@ -88,119 +88,182 @@ def tiny_maze_search(problem):
     return [s, s, w, s, w, w, s, w]
 
 
-def depth_first_search(problem, initial_hit=0, return_hit=False):
+def first_hit(problem, start):
+    # look all directions
+    # if wall is adjacent hit it
+    # turn around and go back to escape wall
+    # finish searching algorithm
+    # return wall_hit_action + normal_path
+
+
+    # x, y = start
+    # Direct = [Directions.NORTH, Directions.SOUTH, Directions.EAST, Directions.WEST]
+    # Opp = [Directions.SOUTH, Directions.NORTH, Directions.WEST, Directions.EAST]
+    # for direction, opposite in zip(Direct, Opp):
+    #     if direction == Directions.NORTH:
+    #         neighbor = (x, y + 1)
+    #     elif direction == Directions.SOUTH:
+    #         neighbor = (x, y - 1)
+    #     elif direction == Directions.EAST:
+    #         neighbor = (x + 1, y)
+    #     elif direction == Directions.WEST:
+    #         neighbor = (x - 1, y)
+
+    #     if problem.is_wall(neighbor):
+    #         return [direction, opposite]
+
+
+    # return []
+
+    # Extract position
+    if isinstance(start, tuple) and len(start) > 0 and isinstance(start[0], tuple):
+        x, y = start[0]   # Corners style: ((x,y), visited)
+    else:
+        x, y = start      # Position style: (x,y)
+
+    pairs = [
+        (Directions.NORTH, Directions.SOUTH),
+        (Directions.SOUTH, Directions.NORTH),
+        (Directions.EAST,  Directions.WEST),
+        (Directions.WEST,  Directions.EAST),
+    ]
+
+    # We need a walls grid to check neighbors safely
+    if not hasattr(problem, "walls"):
+        return []
+
+    for bonk_dir, opp_dir in pairs:
+        dx, dy = Actions.direction_to_vector(bonk_dir)
+        wx, wy = int(x + dx), int(y + dy)
+
+        # adjacent wall => bonk direction found
+        if problem.walls[wx][wy]:
+            prefix = [bonk_dir]
+
+            # only add opposite if it is a legal move (not a wall)
+            odx, ody = Actions.direction_to_vector(opp_dir)
+            ox, oy = int(x + odx), int(y + ody)
+            if not problem.walls[ox][oy]:
+                prefix.append(opp_dir)
+
+            return prefix
+
+    return []
+
+
+
+def depth_first_search(problem):
     """Search the deepest nodes in the search tree first."""
-    "*** YOUR CODE HERE ***"
-    from util import Stack
 
-    # Initialize with (state, hitWalls, actions)
-    stack = Stack()
-    stack.push((problem.get_start_state(), [], initial_hit))  # (state, path, wall_hits)
-    visited = set()
-    visited.add((problem.get_start_state(), initial_hit))
+    """important: problem.get_start_state(), problem.is_goal_state(state), 
+    problem.get_successors(state) => returns a list of triples successor_state, 
+    action (direction state), step_cost (DFS ignores this) """
 
-    while not stack.is_empty():
-        state, path, wall_hits = stack.pop()
+    # implement a stack for LIFO ordering
+    start = problem.get_start_state()
+    
+    if problem.is_goal_state(start):
+        return []                               # start at food
+    
+    stack = util.Stack()
+    visitedStates = set()
+    stack.push((start, []))
+    # wall_hit = first_hit(problem, start)
+    # print("Wall hit action:", wall_hit)
+    # print(problem.get_cost_of_actions(wall_hit))
 
-        if wall_hits > 2:
+
+    while not stack.is_empty():                                # while stack is not empty
+        state, path = stack.pop()
+
+        if state in visitedStates:
             continue
-        #print(state, wall_hits)
-        if problem.is_goal_state(state) and (2>=wall_hits >= 1):
-            if return_hit:
-                return path, wall_hits - initial_hit
-            else:
-                return path
 
-        for successor, action, cost in problem.get_successors(state):
-                next_wall_hits = wall_hits + 1 if problem.is_wall(successor) else wall_hits
-                nextState = (successor, next_wall_hits)
-                if (nextState[0], nextState[1]) not in visited:
-                    stack.push((nextState[0], path + [action], nextState[1]))
-                    visited.add((nextState[0], nextState[1]))
-
+        visitedStates.add(state)
+        if problem.is_goal_state(state):
+            return first_hit(problem, start) + path
+        
+        for (next_state, action, cost) in problem.get_successors(state):
+            if next_state not in visitedStates and not problem.is_wall(next_state):
+                stack.push((next_state, path + [action]))
 
     return []
 
-
-
-def breadth_first_search(problem, initial_hit = 0, return_hit = False):
+def breadth_first_search(problem):
     """Search the shallowest nodes in the search tree first."""
-    "*** YOUR CODE HERE ***"
-    from util import Queue
+    
+    """important: problem.get_start_state(), problem.is_goal_state(state), 
+    problem.get_successors(state) => returns a list of triples successor_state, 
+    action (direction state), step_cost (DFS ignores this) """
 
-    queue = Queue()
-    queue.push((problem.get_start_state(), [], initial_hit))
-    visited = set()
+    # implement a stack for FIFO ordering
+    start = problem.get_start_state()
 
-    while not queue.is_empty():
-        state, path, wall_hits = queue.pop()
+    if problem.is_goal_state(start):
+        return []                                               # start at food
+    
+    queue = util.Queue()
+    visitedStates = set()
+    queue.push((start, []))
+    
+    while not queue.is_empty():                                 # while stack is not empty
+        state, path = queue.pop()
 
-        if wall_hits > 2:
+        if state in visitedStates:                              # skip if visited
             continue
 
-        if problem.is_goal_state(state) and (2>= wall_hits >=1):
-            if return_hit:
-                return path, wall_hits - initial_hit
-            else:
-                return path
+        visitedStates.add(state)                                # add to visited
+        if problem.is_goal_state(state):                        # if this is food
+            return first_hit(problem, start) + path     
+                                            # return path to food
+        for (next_state, action, cost) in problem.get_successors(state):
+            if next_state not in visitedStates and not problem.is_wall(next_state):     # if not wall or visited push!
+                queue.push((next_state, path + [action]))
 
-
-        for successor, action, _ in problem.get_successors(state):
-            next_wall_hits = wall_hits + 1 if problem.is_wall(successor) else wall_hits
-            nextState = (successor, next_wall_hits)
-            if (nextState[0], nextState[1]) not in visited:
-                queue.push((nextState[0], path + [action], nextState[1]))
-                visited.add((nextState[0], nextState[1]))
     return []
 
-def uniform_cost_search(problem, heuristic=None, initial_hit = 0, return_hit = False):
+
+def uniform_cost_search(problem, heuristic=None):
     """Search the node of least total cost first."""
     "*** YOUR CODE HERE ***"
-    from util import PriorityQueue
+    # implement a stack for LIFO ordering
+    start = problem.get_start_state()
+    
+    if problem.is_goal_state(start):
+        return []                                               # start at food
+    
+    # state, actions, cost
+    p_queue = util.PriorityQueue()
+    p_queue.push((start, [], 0), 0)
 
-    pq = PriorityQueue()
-    startState = problem.get_start_state()
-    pq.push((startState, initial_hit, []), 0)
+    # lowest cost / goal to reach state
+    lowest = {start: 0}
+    
+    while not p_queue.is_empty():                                 # while stack is not empty
+        state, actions, cost = p_queue.pop()
 
-    visited = set()
-    visited.add((startState, initial_hit))
-    distance = {}
-    distance[(startState, initial_hit)] = 0
-
-    while True:
-        if pq.is_empty():
-            return []
-
-        currentState, hitWalls, currentActions = pq.pop()
-
-        if hitWalls > 2:
+        # if this entry is worse than our current entry
+        if cost > lowest.get(state, float("inf")):                        # if this is food
             continue
 
-        if problem.is_goal_state(currentState) and (1 <= hitWalls <= 2):
-            if return_hit:
-                return currentActions, wall_hits - initial_hit
-            else:
-                return currentActions
+        if problem.is_goal_state(state):
+            return first_hit(problem, start) + actions
+        
+        # return path to food
+        for (next_state, action, step_cost) in problem.get_successors(state):
+            new_cost = cost + step_cost
 
-
-        for successor, action, stepCost in problem.get_successors(currentState):
-            if problem.is_wall(successor):
-                nextState = (successor, hitWalls + 1)
-            else:
-                nextState = (successor, hitWalls)
-
-            newActions = currentActions + [action]
-            newCost = problem.get_cost_of_actions(newActions)
-            if (nextState[0], nextState[1]) not in distance or newCost < distance[(nextState[0], nextState[1])]:
-                pq.push((nextState[0], nextState[1], newActions), newCost)
-                distance[(nextState[0], nextState[1])] = newCost
-
+            if new_cost < lowest.get(next_state, float("inf")) and not problem.is_wall(next_state):  
+                lowest[next_state] = new_cost   
+                p_queue.push((next_state, actions + [action], new_cost), new_cost)
 
     return []
 
-#
+
+
+
 # heuristics
-#
+    
 def a_really_really_bad_heuristic(position, problem):
     from random import random, sample, choices
     return int(random()*1000)
@@ -210,52 +273,61 @@ def null_heuristic(state, problem=None):
 
 def your_heuristic(state, problem=None):
     """ Your Custom Heuristic """
-    "*** YOUR CODE HERE ***"
-    return 0
+    x, y = state
+    gx, gy = problem.goal
 
-def a_star_search(problem, heuristic=null_heuristic, initial_hit = 0, return_hit = False):
+    # logic from search_agents.py
+    manhattan_heuristic = abs(x - gx) + abs(y - gy)
+    euclidean_heuristic = ((x - gx) ** 2 + (y - gy) ** 2) ** 0.5
+
+    return max(manhattan_heuristic, euclidean_heuristic) 
+    
+def a_star_search(problem, heuristic=your_heuristic):
     """Search the node that has the lowest combined cost and heuristic first."""
     "*** YOUR CODE HERE ***"
-    #util.raise_not_defined()
-    from util import PriorityQueue
+    # get start position and see if start is end
+    start = problem.get_start_state()
+    if problem.is_goal_state(start):
+        return []
+    
+    # now establish data structure PriorityQueue
+    priority_queue = util.PriorityQueue()
+    priority_queue.push((start, [], 0), 0 + heuristic(start, problem))
 
-    pq = PriorityQueue()
-    startState = problem.get_start_state()
-    pq.push((startState, initial_hit, []), heuristic(startState, problem))
+    # lowest cost path to goal, will be updated (DICTIONARY)
+    best_path = {start: 0}
 
-    visited = set()
-    visited.add((startState, initial_hit))
+    while not priority_queue.is_empty():
+        # get initial & prior information per iteration / move
+        (state, path, g) = priority_queue.pop()
 
-    while True:
-        if pq.is_empty():
-            return []
-
-        currentState, hitWalls, currentActions = pq.pop()
-
-        if hitWalls > 2:
+        # check if this path is worse than the previous
+        if g > best_path[state]:
             continue
 
-        if problem.is_goal_state(currentState) and (1 <= hitWalls <= 2):
-            if return_hit:
-                return currentActions, wall_hits - initial_hit
-            else:
-                return currentActions
+        # this will be used to check if we have reached our goal
+        # it also prvoides one wall hit to pass
+        if problem.is_goal_state(state):
+            return first_hit(problem, start) + path
+        
+        # loop through each of the successor states to compare
+        # cost will be used to compare with the lowest we have so far
+        # and action will be used to update the path to be returned
+        for (next_state, action, step_cost) in problem.get_successors(state):
+            current_cost = g + step_cost
+            
+            # if this is a new state or of this cost is less than the best path to the next state
+            if (next_state not in best_path or current_cost < best_path[next_state]) and not problem.is_wall(next_state):
+                # add this node to the best_path dictionary 
+                best_path[next_state] = current_cost
+                new_path = path + [action]
+                f = current_cost + heuristic(next_state, problem)
 
-        for successor, action, stepCost in problem.get_successors(currentState):
-            if problem.is_wall(successor):
-                nextState = (successor, hitWalls + 1)
-            else:
-                nextState = (successor, hitWalls)
+                # push this node onto queue 
+                priority_queue.push((next_state, new_path, current_cost), f)
 
-            if (nextState[0], nextState[1]) not in visited:
-                newActions = currentActions + [action]
-                g_n = problem.get_cost_of_actions(newActions)
-                h_n = heuristic(nextState[0], problem)
-                f_n = g_n + h_n
-                pq.push((nextState[0], nextState[1], newActions), f_n)
-                visited.add((nextState[0], nextState[1]))
-
-    return []
+    
+    return []       # simple no solution... Should never happen.
 
 
 # Abbreviations

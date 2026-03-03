@@ -343,15 +343,12 @@ class CornersProblem(search.SearchProblem):
         self.starting_position = starting_game_state.get_pacman_position()
         top, right = self.walls.height - 2, self.walls.width - 2
         self.corners = ((1, 1), (1, top), (right, 1), (right, top))
+
         for corner in self.corners:
             if not starting_game_state.has_food(*corner):
                 print("Warning: no food in corner " + str(corner))
+
         self._expanded = 0  # NOTE: STUFF WILL BREAK IF YOU CHANGE THIS; Number of search nodes expanded
-        # Please add any code here which you would like to use
-        # in initializing the problem
-        # for example:
-        #     self.debugging = True
-        #     self.total_iterations = 0
 
 
     def get_start_state(self):
@@ -364,20 +361,17 @@ class CornersProblem(search.SearchProblem):
         else:
             visited = frozenset()
         
-        return ((pos), visited)
+        return (pos, visited)
 
     def is_goal_state(self, state):
         """
         Returns whether this search state is a goal state of the problem.
         """
-        pos, visited = state
-        if len(visited) == 4:
-            return True
-        
-        return False
-
+        pos, visited = state        
+        return len(visited) == 4
 
     def is_wall(self, state):
+        # Used by your BFS/DFS to count wall hits
         pos, visited = state
         x, y = pos
         return self.walls[x][y]
@@ -385,34 +379,26 @@ class CornersProblem(search.SearchProblem):
 
     def get_successors(self, state):
         successors = []
+        (x, y), visited = state # initial state position and boolean tag of it has been visited or not
+        self._expanded += 1     # increment
 
-        (x, y), visited = state   # <-- THIS LINE IS REQUIRED
-
-        self._expanded += 1 # DO NOT CHANGE
-
-
-        # Try the 4 legal moves
+        # for each possible direction (compass directions)
         for action in [Directions.NORTH, Directions.SOUTH, Directions.EAST, Directions.WEST]:
             dx, dy = Actions.direction_to_vector(action)
-            nextx, nexty = int(x + dx), int(y + dy)
+            nx, ny = int(x + dx), int(y + dy)
+            next_pos = (nx, ny)
 
-            # wall check
-            if self.walls[nextx][nexty]:
+            # skip walls to not get over 1 wal hit (that hit is gotten from search algorithms first_hit)
+            if self.walls[nx][ny]:
                 continue
-
-            next_pos = (nextx, nexty)
-
-            # update visited corners immutably
+            
+            # if this is a corner add it to visited in an immutable manner, if not a corner just mark it as visited
             if next_pos in self.corners:
                 next_visited = visited | frozenset([next_pos])
             else:
                 next_visited = visited
 
-            next_state = (next_pos, next_visited)
-
-            # cost is always 1 per move
-            successors.append((next_state, action, 1))
-
+            successors.append(((next_pos, next_visited), action, 1))
 
         return successors
 

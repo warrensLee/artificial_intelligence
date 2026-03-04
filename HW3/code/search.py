@@ -181,7 +181,10 @@ def depth_first_search(problem):
 
         visitedStates.add(state)
         if problem.is_goal_state(state):
-            return first_hit(problem, start) + path
+            if problem.__class__.__name__ == "CornersProblem":
+                return first_hit(problem, start) + path
+            else:
+                return path
         
         for (next_state, action, cost) in problem.get_successors(state):
             if next_state not in visitedStates and not problem.is_wall(next_state):
@@ -214,7 +217,10 @@ def breadth_first_search(problem):
 
         visitedStates.add(state)                                # add to visited
         if problem.is_goal_state(state):                        # if this is food
-            return first_hit(problem, start) + path     
+            if problem.__class__.__name__ == "CornersProblem":
+                return first_hit(problem, start) + path
+            else:
+                return path     
                                             # return path to food
         for (next_state, action, cost) in problem.get_successors(state):
             if next_state not in visitedStates and not problem.is_wall(next_state):     # if not wall or visited push!
@@ -247,7 +253,10 @@ def uniform_cost_search(problem, heuristic=None):
             continue
 
         if problem.is_goal_state(state):
-            return first_hit(problem, start) + actions
+            if problem.__class__.__name__ == "CornersProblem":
+                return first_hit(problem, start) + actions
+            else:
+                return actions
         
         # return path to food
         for (next_state, action, step_cost) in problem.get_successors(state):
@@ -308,8 +317,11 @@ def a_star_search(problem, heuristic=your_heuristic):
         # this will be used to check if we have reached our goal
         # it also prvoides one wall hit to pass
         if problem.is_goal_state(state):
-            return first_hit(problem, start) + path
-        
+            if problem.__class__.__name__ == "CornersProblem":
+                return first_hit(problem, start) + path
+            else:
+                return path
+                    
         # loop through each of the successor states to compare
         # cost will be used to compare with the lowest we have so far
         # and action will be used to update the path to be returned

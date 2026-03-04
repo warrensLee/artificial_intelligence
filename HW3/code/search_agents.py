@@ -421,6 +421,11 @@ class CornersProblem(search.SearchProblem):
         return cost
 
 
+# manhattan helper function for the corners_heuristic
+def manhattan(a, b):
+        return abs(a[0] - b[0]) + abs(a[1] - b[1])
+
+
 def corners_heuristic(state, problem):
     """
     A heuristic for the CornersProblem that you defined.
@@ -434,11 +439,72 @@ def corners_heuristic(state, problem):
     shortest path from the state to a goal of the problem; i.e.  it should be
     admissible (as well as consistent).
     """
-    corners = problem.corners  # These are the corner coordinates
-    walls = problem.walls  # These are the walls of the maze, as a Grid (game.py)
+    # walls = problem.walls  # These are the walls of the maze, as a Grid (game.py)
 
-    "*** YOUR CODE HERE ***"
-    util.raise_not_defined()
+    """ I will be making a MST based heuristic that makes h = min Manhattan distance
+    from the current position to remaining corners + MST cost over remaining corners.
+    Manhattan ignores walls, so it underestimates true maze distance and MST gives a 
+    lower bound on the cost to connect/visit remaining corners."""
+
+    # first get the state, corners, and corners that have not been visited
+    pos, visited = state
+    corners = problem.corners  # These are the corner coordinates
+    remaining = tuple(c for c in corners if c not in visited)
+
+    # if no corners remain to be traversed
+    if not remaining:
+        return 0
+    
+    # for each remaining set we will not cache the MST
+    # hasattr: checks if an object's attribute is present
+    # hassattr(object, attribute)
+    if not hasattr(problem, "_mst_cache"):
+        problem._mst_cache = {}
+
+    # now what is the cost to reach the remaining set?
+    start_to_tree  = min(manhattan(pos, c) for c in remaining)
+
+    # next we need the MST cost over remaining corners
+    # remember to hast we must use immutable sets 
+    attribute = frozenset(remaining)
+
+    # now check for this attrubute in the mst cache
+    if attribute in problem._mst_cache:
+        mst_cost = problem._mst_cache[attribute]     # the cost is = to distance to the appropriate node
+    else:
+        in_tree = {remaining[0]}                    # not found so cost and set of nodes -> 0
+        mst_cost = 0
+
+        while len(in_tree) < len(remaining):
+            # for comparison within the loop we have an upper and lower bound
+            best_w = float("inf")
+            best_node = None
+            
+            for a in in_tree:
+                for b in remaining:
+                    if b in in_tree:
+                        continue
+                    w = manhattan(a, b)
+                    if w < best_w:
+                        best_w = w
+                        best_node = b
+        
+            mst_cost += best_w
+            in_tree.add(best_node)
+    
+        problem._mst_cache[attribute] = mst_cost
+
+    return start_to_tree + mst_cost
+
+
+
+
+    
+
+    
+
+
+
 
 
 class AStarCornersAgent(SearchAgent):
@@ -553,8 +619,49 @@ def food_heuristic(state, problem):
     problem.heuristic_info['wall_count']
     """
     "*** YOUR CODE HERE ***"
-    util.raise_not_defined()
-    return 0
+    position, foodGrid = state
+    food_list = foodGrid.as_list()
+
+    if not food_list:
+        return 0
+
+    # Berkeley projects typically provide this dict for caching
+    if not hasattr(problem, "heuristicInfo"):
+        problem.heuristicInfo = {}
+    if "dist_cache" not in problem.heuristicInfo:
+        problem.heuristicInfo["dist_cache"] = {}
+
+    dist_cache = problem.heuristicInfo["dist_cache"]
+
+    def cached_maze_dist(a, b):
+        key = (a, b) if a <= b else (b, a)  # order-independent key
+        if key in dist_cache:
+            return dist_cache[key]
+        # mazeDistance is defined in search_agents.py in the Berkeley codebase
+        d = maze_distance(a, b, problem.starting_game_state)
+        dist_cache[key] = d
+        return d
+
+    # If only one food dot remains, just return distance to it
+    if len(food_list) == 1:
+        return cached_maze_dist(position, food_list[0])
+
+    # Find the pair of food dots farthest apart (maze distance)
+    max_pair_dist = -1
+    far_a = None
+    far_b = None
+
+    for i in range(len(food_list)):
+        for j in range(i + 1, len(food_list)):
+            a, b = food_list[i], food_list[j]
+            d = cached_maze_dist(a, b)
+            if d > max_pair_dist:
+                max_pair_dist = d
+                far_a, far_b = a, b
+
+    # Lower bound: must reach one extreme + must traverse between extremes
+    return min(cached_maze_dist(position, far_a),
+               cached_maze_dist(position, far_b)) + max_pair_dist
 
 
 class ClosestDotSearchAgent(SearchAgent):

@@ -244,7 +244,7 @@ class PositionSearchProblem(search.SearchProblem):
             x, y = state
             dx, dy = Actions.direction_to_vector(action)
             nextx, nexty = int(x + dx), int(y + dy)
-            if 0 <= nextx and nextx < width and 0 <= nexty and nexty < height: #not self.walls[nextx][nexty]:
+            if 0 <= nextx and nextx < width and 0 <= nexty and nexty < height and not self.walls[nextx][nexty]:  #not self.walls[nextx][nexty]:
                 next_state = (nextx, nexty)
                 cost = self.cost_fn(next_state)
                 successors.append(
@@ -465,7 +465,7 @@ def corners_heuristic(state, problem):
     start_to_tree  = min(manhattan(pos, c) for c in remaining)
 
     # next we need the MST cost over remaining corners
-    # remember to hast we must use immutable sets 
+    # remember, in oreder to hash (use dictionary keys), we must use immutable sets 
     attribute = frozenset(remaining)
 
     # now check for this attrubute in the mst cache
@@ -476,20 +476,30 @@ def corners_heuristic(state, problem):
         mst_cost = 0
 
         while len(in_tree) < len(remaining):
-            # for comparison within the loop we have an upper and lower bound
-            best_w = float("inf")
+            # first track the best edge we can add to expand the tree,
+            # start with infinity so any real distance will be smaller.
+            best_weight = float("inf")
             best_node = None
-            
+
+            # for each node already in the tree, check edges to nodes
+            # that arenot yet included. We want the cheapest edge that 
+            # connects the current tree to a new corner.
             for a in in_tree:
                 for b in remaining:
                     if b in in_tree:
-                        continue
-                    w = manhattan(a, b)
-                    if w < best_w:
-                        best_w = w
+                        continue            # skip nodes already connected
+
+                    # use Manhattan distance as the edge weight.
+                    weight = manhattan(a, b)
+
+                    # compare to best weight so far to find the best
+                    if weight < best_weight:
+                        best_weight = weight
                         best_node = b
-        
-            mst_cost += best_w
+
+            # add the cheapest edge found to the MST cost,
+            # then add the node into the tree.
+            mst_cost += best_weight
             in_tree.add(best_node)
     
         problem._mst_cache[attribute] = mst_cost
@@ -560,7 +570,7 @@ class FoodSearchProblem(object):
             x,y = state[0]
             dx, dy = Actions.direction_to_vector(direction)
             nextx, nexty = int(x + dx), int(y + dy)
-            if 0 <= nextx and nextx < M and 0 <= nexty and nexty < N:
+            if 0 <= nextx and nextx < M and 0 <= nexty and nexty < N and not self.walls[nextx][nexty]:
                 nextFood = state[1].copy()
                 nextFood[nextx][nexty] = False
                 successors.append( ( ((nextx, nexty), nextFood), direction, 1) )
@@ -619,49 +629,38 @@ def food_heuristic(state, problem):
     problem.heuristic_info['wall_count']
     """
     "*** YOUR CODE HERE ***"
+
+
+    # Heuristic idea:
+    # Pacman must first reach the food region (nearest food),
+    # then traverse the spread of the remaining food dots (diameter).
+    # Remember that the Manhattan distance ignores walls.
+
+
+    # gets useful information
     position, foodGrid = state
-    food_list = foodGrid.as_list()
+    foods = foodGrid.as_list()
 
-    if not food_list:
+    # if all foods are found
+    if not foods:
         return 0
+    
+    # using a previously defined function manhattan,
+    # we will find the distance between start and the 
+    # closet food (by checking all foods)
+    nearest_food_dist = min(manhattan(position, f) for f in foods)
 
-    # Berkeley projects typically provide this dict for caching
-    if not hasattr(problem, "heuristicInfo"):
-        problem.heuristicInfo = {}
-    if "dist_cache" not in problem.heuristicInfo:
-        problem.heuristicInfo["dist_cache"] = {}
+    # now we need to check the spread (diameter) between foods
+    # h = (distance from Pacman to nearest food) + (spread of foods)
+    food_diameter = 0
+    for i in range(len(foods)):
+        for j in range(i + 1, len(foods)):          # start j at i + 1 so we don't compare the same pair twice
+            dist = manhattan(foods[i], foods[j])
+            if dist > food_diameter: 
+                food_diameter = dist
 
-    dist_cache = problem.heuristicInfo["dist_cache"]
+    return nearest_food_dist + food_diameter
 
-    def cached_maze_dist(a, b):
-        key = (a, b) if a <= b else (b, a)  # order-independent key
-        if key in dist_cache:
-            return dist_cache[key]
-        # mazeDistance is defined in search_agents.py in the Berkeley codebase
-        d = maze_distance(a, b, problem.starting_game_state)
-        dist_cache[key] = d
-        return d
-
-    # If only one food dot remains, just return distance to it
-    if len(food_list) == 1:
-        return cached_maze_dist(position, food_list[0])
-
-    # Find the pair of food dots farthest apart (maze distance)
-    max_pair_dist = -1
-    far_a = None
-    far_b = None
-
-    for i in range(len(food_list)):
-        for j in range(i + 1, len(food_list)):
-            a, b = food_list[i], food_list[j]
-            d = cached_maze_dist(a, b)
-            if d > max_pair_dist:
-                max_pair_dist = d
-                far_a, far_b = a, b
-
-    # Lower bound: must reach one extreme + must traverse between extremes
-    return min(cached_maze_dist(position, far_a),
-               cached_maze_dist(position, far_b)) + max_pair_dist
 
 
 class ClosestDotSearchAgent(SearchAgent):
@@ -699,7 +698,36 @@ class ClosestDotSearchAgent(SearchAgent):
         walls = game_state.get_walls()
         problem = AnyFoodSearchProblem(game_state)
         "*** YOUR CODE HERE ***"
-        util.raise_not_defined()
+        
+        prefix = []
+
+        # Only do the wall-bonk ONCE for the entire game
+        if self.num_hits == 0:
+            walls = game_state.get_walls()
+            x, y = game_state.get_pacman_position()
+
+            candidates = [
+                (Directions.NORTH, (x, y + 1), Directions.SOUTH),
+                (Directions.SOUTH, (x, y - 1), Directions.NORTH),
+                (Directions.EAST,  (x + 1, y), Directions.WEST),
+                (Directions.WEST,  (x - 1, y), Directions.EAST),
+            ]
+
+            for d, (wx, wy), opp in candidates:
+                if walls[wx][wy]:  # adjacent wall => bonk direction found
+
+                    # make sure the "escape" move is NOT also a wall
+                    ox, oy = x + (x - wx), y + (y - wy)   # opposite cell
+                    if not walls[ox][oy]:
+                        prefix = [d, opp]   # bonk, then move away
+                        self.num_hits += 1  # count exactly one wall hit
+                    else:
+                        prefix = [d]        # at least bonk once; can't safely move away
+                        self.num_hits += 1
+
+                    break
+
+        return prefix + search.bfs(problem)
 
 
 class AnyFoodSearchProblem(PositionSearchProblem):

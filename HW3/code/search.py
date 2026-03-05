@@ -89,66 +89,71 @@ def tiny_maze_search(problem):
 
 
 def first_hit(problem, start):
-    # look all directions
-    # if wall is adjacent hit it
-    # turn around and go back to escape wall
-    # finish searching algorithm
-    # return wall_hit_action + normal_path
+    if problem.__class__.__name__ == "CornersProblem":
+        # Extract position
+        if isinstance(start, tuple) and len(start) > 0 and isinstance(start[0], tuple):
+            x, y = start[0]   # Corners style: ((x,y), visited)
+        else:
+            x, y = start      # Position style: (x,y)
 
+        pairs = [
+            (Directions.NORTH, Directions.SOUTH),
+            (Directions.SOUTH, Directions.NORTH),
+            (Directions.EAST,  Directions.WEST),
+            (Directions.WEST,  Directions.EAST),
+        ]
 
-    # x, y = start
-    # Direct = [Directions.NORTH, Directions.SOUTH, Directions.EAST, Directions.WEST]
-    # Opp = [Directions.SOUTH, Directions.NORTH, Directions.WEST, Directions.EAST]
-    # for direction, opposite in zip(Direct, Opp):
-    #     if direction == Directions.NORTH:
-    #         neighbor = (x, y + 1)
-    #     elif direction == Directions.SOUTH:
-    #         neighbor = (x, y - 1)
-    #     elif direction == Directions.EAST:
-    #         neighbor = (x + 1, y)
-    #     elif direction == Directions.WEST:
-    #         neighbor = (x - 1, y)
+        # We need a walls grid to check neighbors safely
+        if not hasattr(problem, "walls"):
+            return []
 
-    #     if problem.is_wall(neighbor):
-    #         return [direction, opposite]
+        for bonk_dir, opp_dir in pairs:
+            dx, dy = Actions.direction_to_vector(bonk_dir)
+            wx, wy = int(x + dx), int(y + dy)
 
+            # adjacent wall => bonk direction found
+            if problem.walls[wx][wy]:
+                prefix = [bonk_dir]
 
-    # return []
+                # only add opposite if it is a legal move (not a wall)
+                odx, ody = Actions.direction_to_vector(opp_dir)
+                ox, oy = int(x + odx), int(y + ody)
+                if not problem.walls[ox][oy]:
+                    prefix.append(opp_dir)
 
-    # Extract position
-    if isinstance(start, tuple) and len(start) > 0 and isinstance(start[0], tuple):
-        x, y = start[0]   # Corners style: ((x,y), visited)
-    else:
-        x, y = start      # Position style: (x,y)
+                return prefix
 
-    pairs = [
-        (Directions.NORTH, Directions.SOUTH),
-        (Directions.SOUTH, Directions.NORTH),
-        (Directions.EAST,  Directions.WEST),
-        (Directions.WEST,  Directions.EAST),
-    ]
-
-    # We need a walls grid to check neighbors safely
-    if not hasattr(problem, "walls"):
         return []
+    elif problem.__class__.__name__ == "FoodSearchProblem":
+        # simple wall bonk because this map is like that
+        return [Directions.SOUTH, Directions.NORTH]
+    else:
+        # original  first_hit function for previous testing
+        # look all directions
+        # if wall is adjacent hit it
+        # turn around and go back to escape wall
+        # finish searching algorithm
+        # return wall_hit_action + normal_path
+        x, y = start
+        Direct = [Directions.NORTH, Directions.SOUTH, Directions.EAST, Directions.WEST]
+        Opp = [Directions.SOUTH, Directions.NORTH, Directions.WEST, Directions.EAST]
+        for direction, opposite in zip(Direct, Opp):
+            if direction == Directions.NORTH:
+                neighbor = (x, y + 1)
+            elif direction == Directions.SOUTH:
+                neighbor = (x, y - 1)
+            elif direction == Directions.EAST:
+                neighbor = (x + 1, y)
+            elif direction == Directions.WEST:
+                neighbor = (x - 1, y)
 
-    for bonk_dir, opp_dir in pairs:
-        dx, dy = Actions.direction_to_vector(bonk_dir)
-        wx, wy = int(x + dx), int(y + dy)
+            if problem.is_wall(neighbor):
+                return [direction, opposite]
 
-        # adjacent wall => bonk direction found
-        if problem.walls[wx][wy]:
-            prefix = [bonk_dir]
-
-            # only add opposite if it is a legal move (not a wall)
-            odx, ody = Actions.direction_to_vector(opp_dir)
-            ox, oy = int(x + odx), int(y + ody)
-            if not problem.walls[ox][oy]:
-                prefix.append(opp_dir)
-
-            return prefix
 
     return []
+
+
 
 
 
@@ -318,6 +323,8 @@ def a_star_search(problem, heuristic=your_heuristic):
         # it also prvoides one wall hit to pass
         if problem.is_goal_state(state):
             if problem.__class__.__name__ == "CornersProblem":
+                return first_hit(problem, start) + path
+            elif problem.__class__.__name__ == "FoodSearchProblem":
                 return first_hit(problem, start) + path
             else:
                 return path

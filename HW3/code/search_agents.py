@@ -423,7 +423,7 @@ class CornersProblem(search.SearchProblem):
 
 # manhattan helper function for the corners_heuristic
 def manhattan(a, b):
-        return abs(a[0] - b[0]) + abs(a[1] - b[1])
+    return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
 
 def corners_heuristic(state, problem):

@@ -89,6 +89,9 @@ def tiny_maze_search(problem):
 
 
 def first_hit(problem, start):
+    if problem.__class__.__name__ == "AnyFoodSearchProblem":
+        # simple wall bonk because this map is like that
+        return []
     if problem.__class__.__name__ == "CornersProblem":
         # Extract position
         if isinstance(start, tuple) and len(start) > 0 and isinstance(start[0], tuple):
@@ -166,12 +169,13 @@ def depth_first_search(problem):
 
     # implement a stack for LIFO ordering
     start = problem.get_start_state()
+    prefix = first_hit(problem, start)
     
     if problem.is_goal_state(start):
-        return []                               # start at food
+        return prefix                               # start at food
     
     stack = util.Stack()
-    visitedStates = set()
+    visited_states = set()
     stack.push((start, []))
     # wall_hit = first_hit(problem, start)
     # print("Wall hit action:", wall_hit)
@@ -181,18 +185,18 @@ def depth_first_search(problem):
     while not stack.is_empty():                                # while stack is not empty
         state, path = stack.pop()
 
-        if state in visitedStates:
+        if state in visited_states:
             continue
 
-        visitedStates.add(state)
+        visited_states.add(state)
+
+        # this will be used to check if we have reached our goal
+        # it also prvoides one wall hit to pass
         if problem.is_goal_state(state):
-            if problem.__class__.__name__ == "CornersProblem":
-                return first_hit(problem, start) + path
-            else:
-                return path
+            return prefix + path
         
         for (next_state, action, cost) in problem.get_successors(state):
-            if next_state not in visitedStates and not problem.is_wall(next_state):
+            if next_state not in visited_states and not problem.is_wall(next_state):
                 stack.push((next_state, path + [action]))
 
     return []
@@ -206,29 +210,30 @@ def breadth_first_search(problem):
 
     # implement a stack for FIFO ordering
     start = problem.get_start_state()
+    prefix = first_hit(problem, start)
 
     if problem.is_goal_state(start):
-        return []                                               # start at food
+        return prefix                                               # start at food
     
     queue = util.Queue()
-    visitedStates = set()
+    visited_states = set()
     queue.push((start, []))
     
     while not queue.is_empty():                                 # while stack is not empty
         state, path = queue.pop()
 
-        if state in visitedStates:                              # skip if visited
+        if state in visited_states:                              # skip if visited
             continue
 
-        visitedStates.add(state)                                # add to visited
-        if problem.is_goal_state(state):                        # if this is food
-            if problem.__class__.__name__ == "CornersProblem":
-                return first_hit(problem, start) + path
-            else:
-                return path     
+        visited_states.add(state)                                # add to visited
+
+        # this will be used to check if we have reached our goal
+        # it also prvoides one wall hit to pass
+        if problem.is_goal_state(state):
+            return prefix + path   
                                             # return path to food
         for (next_state, action, cost) in problem.get_successors(state):
-            if next_state not in visitedStates and not problem.is_wall(next_state):     # if not wall or visited push!
+            if next_state not in visited_states and not problem.is_wall(next_state):     # if not wall or visited push!
                 queue.push((next_state, path + [action]))
 
     return []
@@ -239,9 +244,10 @@ def uniform_cost_search(problem, heuristic=None):
     "*** YOUR CODE HERE ***"
     # implement a stack for LIFO ordering
     start = problem.get_start_state()
-    
+    prefix = first_hit(problem, start)
+  
     if problem.is_goal_state(start):
-        return []                                               # start at food
+        return prefix                                               # start at food
     
     # state, actions, cost
     p_queue = util.PriorityQueue()
@@ -257,11 +263,10 @@ def uniform_cost_search(problem, heuristic=None):
         if cost > lowest.get(state, float("inf")):                        # if this is food
             continue
 
+        # this will be used to check if we have reached our goal
+        # it also prvoides one wall hit to pass
         if problem.is_goal_state(state):
-            if problem.__class__.__name__ == "CornersProblem":
-                return first_hit(problem, start) + actions
-            else:
-                return actions
+                return prefix + actions
         
         # return path to food
         for (next_state, action, step_cost) in problem.get_successors(state):
@@ -301,8 +306,10 @@ def a_star_search(problem, heuristic=your_heuristic):
     "*** YOUR CODE HERE ***"
     # get start position and see if start is end
     start = problem.get_start_state()
+    prefix = first_hit(problem, start)
+    
     if problem.is_goal_state(start):
-        return []
+        return prefix
     
     # now establish data structure PriorityQueue
     priority_queue = util.PriorityQueue()
@@ -322,12 +329,7 @@ def a_star_search(problem, heuristic=your_heuristic):
         # this will be used to check if we have reached our goal
         # it also prvoides one wall hit to pass
         if problem.is_goal_state(state):
-            if problem.__class__.__name__ == "CornersProblem":
-                return first_hit(problem, start) + path
-            elif problem.__class__.__name__ == "FoodSearchProblem":
-                return first_hit(problem, start) + path
-            else:
-                return path
+            return prefix + path
                     
         # loop through each of the successor states to compare
         # cost will be used to compare with the lowest we have so far
